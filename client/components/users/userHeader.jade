@@ -13,8 +13,6 @@ template(name="memberMenuPopup")
     with currentUser
       li: a.js-edit-profile {{_ 'edit-profile'}}
       li: a.js-change-settings {{_ 'change-settings'}}
-      li: a.js-change-avatar {{_ 'edit-avatar'}}
-      li: a.js-change-password {{_ 'changePasswordPopup-title'}}
       li: a.js-change-language {{_ 'changeLanguagePopup-title'}}
       li: a.js-edit-notification {{_ 'editNotificationPopup-title'}}
     if currentUser.isAdmin

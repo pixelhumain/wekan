@@ -20,9 +20,11 @@ AccountsTemplates.configure({
   defaultLayout: 'userFormsLayout',
   defaultContentRegion: 'content',
   confirmPassword: false,
-  enablePasswordChange: true,
-  sendVerificationEmail: true,
-  showForgotPasswordLink: true,
+  enablePasswordChange: false,
+  sendVerificationEmail: false,
+  showForgotPasswordLink: false,
+  hideSignUpLink: true,
+  hideSignInLink: true,
   onLogoutHook() {
     const homePage = 'home';
     if (FlowRouter.getRouteName() === homePage) {
@@ -33,7 +35,7 @@ AccountsTemplates.configure({
   },
 });
 
-['signIn', 'signUp', 'resetPwd', 'forgotPwd', 'enrollAccount'].forEach(
+['signIn'].forEach(
   (routeName) => AccountsTemplates.configureRoute(routeName));
 
 // We display the form to change the password in a popup window that already
@@ -46,18 +48,18 @@ AccountsTemplates.configure({
   },
 });
 
-AccountsTemplates.configureRoute('changePwd', {
+/*AccountsTemplates.configureRoute('changePwd', {
   redirect() {
     // XXX We should emit a notification once we have a notification system.
     // Currently the user has no indication that his modification has been
     // applied.
     Popup.back();
   },
-});
+});*/
 
 if (Meteor.isServer) {
 
-  ['resetPassword-subject', 'resetPassword-text', 'verifyEmail-subject', 'verifyEmail-text', 'enrollAccount-subject', 'enrollAccount-text'].forEach((str) => {
+  /*['resetPassword-subject', 'resetPassword-text', 'verifyEmail-subject', 'verifyEmail-text', 'enrollAccount-subject', 'enrollAccount-text'].forEach((str) => {
     const [templateName, field] = str.split('-');
     Accounts.emailTemplates[templateName][field] = (user, url) => {
       return TAPi18n.__(`email-${str}`, {
@@ -66,5 +68,5 @@ if (Meteor.isServer) {
         siteName: Accounts.emailTemplates.siteName,
       }, user.getLanguage());
     };
-  });
+  });*/
 }

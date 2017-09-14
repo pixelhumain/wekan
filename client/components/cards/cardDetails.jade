@@ -116,11 +116,19 @@ template(name="cardDetailsActionsPopup")
     hr
     ul.pop-over-list
       li: a.js-move-card {{_ 'moveCardPopup-title'}}
+      li: a.js-copy-card {{_ 'copyCardPopup-title'}}
       unless archived
         li: a.js-archive {{_ 'archive-card'}}
       li: a.js-more {{_ 'cardMorePopup-title'}}
 
 template(name="moveCardPopup")
+  +boardLists
+
+template(name="copyCardPopup")
+  label(for='copy-card-title') {{_ 'title'}}:
+  textarea#copy-card-title.minicard-composer-textarea.js-card-title(autofocus)
+    = title
+  label {{_ 'lists'}}:
   +boardLists
 
 template(name="cardMembersPopup")
@@ -141,7 +149,10 @@ template(name="cardMorePopup")
       span {{_ 'link-card'}}
       = ' '
       i.fa.colorful(class="{{#if board.isPublic}}fa-globe{{else}}fa-lock{{/if}}")
-      input.inline-input(type="text" readonly value="{{ absoluteUrl }}")
+      input.inline-input(type="text" id="cardURL" readonly value="{{ absoluteUrl }}")
+      button.js-copy-card-link-to-clipboard(class="btn") {{_ 'copy-card-link-to-clipboard'}}
+    span.clearfix
+    br
     | {{_ 'added'}}
     span.date(title=card.createdAt) {{ moment createdAt 'LLL' }}
     a.js-delete(title="{{_ 'card-delete-notice'}}") {{_ 'delete'}}

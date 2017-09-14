@@ -3,7 +3,25 @@ Attachments = new FS.Collection('attachments', {
 
     // XXX Add a new store for cover thumbnails so we don't load big images in
     // the general board view
-    new FS.Store.GridFS('attachments'),
+    new FS.Store.GridFS('attachments', {
+      // If the uploaded document is not an image we need to enforce browser
+      // download instead of execution. This is particularly important for HTML
+      // files that the browser will just execute if we don't serve them with the
+      // appropriate `application/octet-stream` MIME header which can lead to user
+      // data leaks. I imagine other formats (like PDF) can also be attack vectors.
+      // See https://github.com/wekan/wekan/issues/99
+      // XXX Should we use `beforeWrite` option of CollectionFS instead of
+      // collection-hooks?
+      // We should use `beforeWrite`.
+      beforeWrite: (fileObj) => {
+        if (!fileObj.isImage()) {
+          return {
+            type: 'application/octet-stream',
+          };
+        }
+        return {};
+      },
+    }),
   ],
 });
 
@@ -21,19 +39,13 @@ if (Meteor.isServer) {
     // We authorize the attachment download either:
     // - if the board is public, everyone (even unconnected) can download it
     // - if the board is private, only board members can download it
-    //
-    // XXX We have a bug with the `userId` verification:
-    //
-    //   https://github.com/CollectionFS/Meteor-CollectionFS/issues/449
-    //
     download(userId, doc) {
-      const query = {
-        $or: [
-          { 'members.userId': userId },
-          { permission: 'public' },
-        ],
-      };
-      return Boolean(Boards.findOne(doc.boardId, query));
+      const board = Boards.findOne(doc.boardId);
+      if (board.isPublic()) {
+        return true;
+      } else {
+        return board.hasMember(userId);
+      }
     },
 
     fetch: ['boardId'],
@@ -42,33 +54,25 @@ if (Meteor.isServer) {
 
 // XXX Enforce a schema for the Attachments CollectionFS
 
-Attachments.files.before.insert((userId, doc) => {
-  const file = new FS.File(doc);
-  doc.userId = userId;
-
-  // If the uploaded document is not an image we need to enforce browser
-  // download instead of execution. This is particularly important for HTML
-  // files that the browser will just execute if we don't serve them with the
-  // appropriate `application/octet-stream` MIME header which can lead to user
-  // data leaks. I imagine other formats (like PDF) can also be attack vectors.
-  // See https://github.com/wekan/wekan/issues/99
-  // XXX Should we use `beforeWrite` option of CollectionFS instead of
-  // collection-hooks?
-  if (!file.isImage()) {
-    file.original.type = 'application/octet-stream';
-  }
-});
-
 if (Meteor.isServer) {
   Attachments.files.after.insert((userId, doc) => {
-    Activities.insert({
-      userId,
-      type: 'card',
-      activityType: 'addAttachment',
-      attachmentId: doc._id,
-      boardId: doc.boardId,
-      cardId: doc.cardId,
-    });
+    // If the attachment doesn't have a source field
+    // or its source is different than import
+    if (!doc.source || doc.source !== 'import') {
+      // Add activity about adding the attachment
+      Activities.insert({
+        userId,
+        type: 'card',
+        activityType: 'addAttachment',
+        attachmentId: doc._id,
+        boardId: doc.boardId,
+        cardId: doc.cardId,
+      });
+    } else {
+      // Don't add activity about adding the attachment as the activity
+      // be imported and delete source field
+      Attachments.update( {_id: doc._id}, {$unset: { source : '' } } );
+    }
   });
 
   Attachments.files.after.remove((userId, doc) => {

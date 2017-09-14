@@ -12,12 +12,18 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.versionsFrom('1.4.2.3');
+
   api.use([
     'ecmascript',
     'ejson',
     'underscore',
     'accounts-base',
-    'http'
+    'http',
+    'check',
+    'simple:json-routes@2.1.0',
+    'simple:authenticate-user-by-token@1.0.1',
+    'simple:rest-bearer-token-parser@1.0.1',
+    'simple:rest-json-error-handler@1.0.1'
   ]);
 
   api.add_files('server/config.js', 'server');

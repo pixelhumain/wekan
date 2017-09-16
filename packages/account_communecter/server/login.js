@@ -12,7 +12,7 @@ export const loginGen = (loginRequest) => {
         "pwd": loginRequest.pwd,
       }
     });
-    console.log(response);
+    //console.log(response);
     if(response && response.data && response.data.result === true && response.data.id){
 
       let userId = null;
@@ -23,11 +23,11 @@ export const loginGen = (loginRequest) => {
       }else{
         retourId = response.data.id;
       }
-      console.log(response.data.account.email);
+      //console.log(response.data.account.email);
 
       //ok valide
       var userM = Meteor.users.findOne({'_id':retourId});
-      console.log(userM);
+      //console.log(userM);
       if(userM){
         //Meteor.user existe
         userId= userM._id;

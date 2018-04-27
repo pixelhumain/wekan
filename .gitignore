@@ -13,3 +13,7 @@ package-lock.json
 **/stage
 **/prime
 **/*.snap
+settings.json
+settings-dev.json
+settings-qa.json
+development.settings.json

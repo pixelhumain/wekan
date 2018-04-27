@@ -18,13 +18,18 @@ BlazeComponent.extendComponent({
   // callback, we basically solve all issues related to reactive updates. A
   // comment below provides further details.
   onRendered() {
-    const boardComponent = this.parentComponent();
+    const boardComponent = this.parentComponent().parentComponent();
+
+    function userIsMember() {
+      return Meteor.user() && Meteor.user().isBoardMember() && !Meteor.user().isCommentOnly();
+    }
+
     const itemsSelector = '.js-minicard:not(.placeholder, .js-card-composer)';
     const $cards = this.$('.js-minicards');
     $cards.sortable({
-      connectWith: '.js-minicards',
+      connectWith: '.js-minicards:not(.js-list-full)',
       tolerance: 'pointer',
-      appendTo: 'body',
+      appendTo: '.board-canvas',
       helper(evt, item) {
         const helper = item.clone();
         if (MultiSelection.isActive()) {
@@ -40,7 +45,6 @@ BlazeComponent.extendComponent({
       },
       distance: 7,
       items: itemsSelector,
-      scroll: false,
       placeholder: 'minicard-wrapper placeholder',
       start(evt, ui) {
         ui.placeholder.height(ui.helper.height());
@@ -55,6 +59,7 @@ BlazeComponent.extendComponent({
         const nCards = MultiSelection.isActive() ? MultiSelection.count() : 1;
         const sortIndex = calculateIndex(prevCardDom, nextCardDom, nCards);
         const listId = Blaze.getData(ui.item.parents('.list').get(0))._id;
+        const swimlaneId = Blaze.getData(ui.item.parents('.swimlane').get(0))._id;
 
         // Normally the jquery-ui sortable library moves the dragged DOM element
         // to its new position, which disrupts Blaze reactive updates mechanism
@@ -67,20 +72,16 @@ BlazeComponent.extendComponent({
 
         if (MultiSelection.isActive()) {
           Cards.find(MultiSelection.getMongoSelector()).forEach((card, i) => {
-            card.move(listId, sortIndex.base + i * sortIndex.increment);
+            card.move(swimlaneId, listId, sortIndex.base + i * sortIndex.increment);
           });
         } else {
           const cardDomElement = ui.item.get(0);
           const card = Blaze.getData(cardDomElement);
-          card.move(listId, sortIndex.base);
+          card.move(swimlaneId, listId, sortIndex.base);
         }
         boardComponent.setIsDragging(false);
       },
     });
-
-    function userIsMember() {
-      return Meteor.user() && Meteor.user().isBoardMember() && !Meteor.user().isCommentOnly();
-    }
 
     // Disable drag-dropping if the current user is not a board member or is comment only
     this.autorun(() => {
@@ -114,3 +115,10 @@ BlazeComponent.extendComponent({
     });
   },
 }).register('list');
+
+Template.miniList.events({
+  'click .js-select-list'() {
+    const listId = this._id;
+    Session.set('currentList', listId);
+  },
+});

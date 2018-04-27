@@ -52,7 +52,6 @@
     "prefer-const": 2,
     "prefer-spread": 2,
     "prefer-template": 2,
-    "no-console": 0,
     "no-unused-vars" : "warn"
   },
   "globals": {
@@ -125,11 +124,14 @@
     "Checklists": true,
     "Settings": true,
     "InvitationCodes": true,
-    "Winston":true,
     "JsonRoutes": true,
     "Authentication": true,
     "Integrations": true,
     "HTTP": true,
-    "AccountSettings": true
+    "AccountSettings": true,
+    "Announcements": true,
+    "Swimlanes": true,
+    "ChecklistItems": true,
+    "Npm": true
   }
 }

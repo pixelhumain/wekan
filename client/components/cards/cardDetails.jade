@@ -9,12 +9,42 @@ template(name="cardDetails")
           a.fa.fa-navicon.card-details-menu.js-open-card-details-menu
         h2.card-details-title.js-card-title(
           class="{{#if canModifyCard}}js-open-inlined-form is-editable{{/if}}")
-            = title
-            if isWatching
-              i.fa.fa-eye.card-details-watch
+            +viewer
+              = title
+              if isWatching
+                i.fa.fa-eye.card-details-watch
 
     if archived
       p.warning {{_ 'card-archived'}}
+
+    .card-details-items
+      .card-details-item.card-details-item-received
+        h3.card-details-item-title {{_ 'card-received'}}
+        if receivedAt
+          +cardReceivedDate
+        else
+          a.js-received-date {{_ 'add'}}
+
+      .card-details-item.card-details-item-start
+        h3.card-details-item-title {{_ 'card-start'}}
+        if startAt
+          +cardStartDate
+        else
+          a.js-start-date {{_ 'add'}}
+
+      .card-details-item.card-details-item-due
+        h3.card-details-item-title {{_ 'card-due'}}
+        if dueAt
+          +cardDueDate
+        else
+          a.js-due-date {{_ 'add'}}
+
+      .card-details-item.card-details-item-end
+        h3.card-details-item-title {{_ 'card-end'}}
+        if endAt
+          +cardEndDate
+        else
+          a.js-end-date {{_ 'add'}}
 
     .card-details-items
       .card-details-item.card-details-item-members
@@ -35,16 +65,14 @@ template(name="cardDetails")
           a.card-label.add-label.js-add-labels(title="{{_ 'card-labels-title'}}")
             i.fa.fa-plus
 
-      if startAt
-        .card-details-item.card-details-item-start
-          h3.card-details-item-title {{_ 'card-start'}}
-          +cardStartDate
-
-      if dueAt
-        .card-details-item.card-details-item-due
-          h3.card-details-item-title {{_ 'card-due'}}
-          +cardDueDate
-
+    .card-details-items
+      if spentTime
+        .card-details-item.card-details-item-spent
+          if isOvertime
+            h3.card-details-item-title {{_ 'overtime-hours'}}
+          else
+            h3.card-details-item-title {{_ 'spent-time-hours'}}
+          +cardSpentTime
 
     //- XXX We should use "editable" to avoid repetiting ourselves
     if canModifyCard
@@ -76,16 +104,24 @@ template(name="cardDetails")
     hr
     +checklists(cardId = _id)
 
-    if attachments.count
-      hr
-      h2
-        i.fa.fa-paperclip
-        | {{_ 'attachments'}}
+    hr
+    h3
+      i.fa.fa-paperclip
+      | {{_ 'attachments'}}
 
-      +attachmentsGalery
+    +attachmentsGalery
 
     hr
-    h2 {{ _ 'activity'}}
+    .activity-title
+      h3 {{ _ 'activity'}}
+      if currentUser.isBoardMember
+        .material-toggle-switch
+          span.toggle-switch-title {{_ 'hide-system-messages'}}
+          if hiddenSystemMessages
+            input.toggle-switch(type="checkbox" id="toggleButton" checked="checked")
+          else
+            input.toggle-switch(type="checkbox" id="toggleButton")
+          label.toggle-label(for="toggleButton")
     if currentUser.isBoardMember
       +commentForm
     if isLoaded.get
@@ -107,8 +143,11 @@ template(name="cardDetailsActionsPopup")
       li: a.js-members {{_ 'card-edit-members'}}
       li: a.js-labels {{_ 'card-edit-labels'}}
       li: a.js-attachments {{_ 'card-edit-attachments'}}
+      li: a.js-received-date {{_ 'editCardReceivedDatePopup-title'}}
       li: a.js-start-date {{_ 'editCardStartDatePopup-title'}}
       li: a.js-due-date {{_ 'editCardDueDatePopup-title'}}
+      li: a.js-end-date {{_ 'editCardEndDatePopup-title'}}
+      li: a.js-spent-time {{_ 'editCardSpentTimePopup-title'}}
     hr
     ul.pop-over-list
       li: a.js-move-card-to-top {{_ 'moveCardToTop-title'}}
@@ -117,12 +156,57 @@ template(name="cardDetailsActionsPopup")
     ul.pop-over-list
       li: a.js-move-card {{_ 'moveCardPopup-title'}}
       li: a.js-copy-card {{_ 'copyCardPopup-title'}}
+      li: a.js-copy-checklist-cards {{_ 'copyChecklistToManyCardsPopup-title'}}
       unless archived
         li: a.js-archive {{_ 'archive-card'}}
       li: a.js-more {{_ 'cardMorePopup-title'}}
 
 template(name="moveCardPopup")
-  +boardLists
+  if isSandstorm
+    +boardLists
+  else
+    +boardsAndLists
+
+template(name="copyCardPopup")
+  label(for='copy-card-title') {{_ 'title'}}:
+  textarea#copy-card-title.minicard-composer-textarea.js-card-title(autofocus)
+    = title
+  if isSandstorm
+    +boardLists
+  else
+    +boardsAndLists
+
+
+template(name="copyChecklistToManyCardsPopup")
+  label(for='copy-checklist-cards-title') {{_ 'copyChecklistToManyCardsPopup-instructions'}}:
+  textarea#copy-card-title.minicard-composer-textarea.js-card-title(autofocus)
+    | {{_ 'copyChecklistToManyCardsPopup-format'}}
+  if isSandstorm
+    +boardLists
+  else
+    +boardsAndLists
+
+template(name="boardsAndLists")
+  label {{_ 'boards'}}:
+  select.js-select-boards
+    each boards
+      if $eq _id currentBoard._id
+        option(value="{{_id}}" selected) {{_ 'current'}}
+      else
+        option(value="{{_id}}") {{title}}
+
+  label {{_ 'swimlanes'}}:
+  select.js-select-swimlanes
+    each swimlanes
+      option(value="{{_id}}") {{title}}
+
+  label {{_ 'lists'}}:
+  select.js-select-lists
+    each aBoardLists
+      option(value="{{_id}}") {{title}}
+
+  .edit-controls.clearfix
+    button.primary.confirm.js-done {{_ 'done'}}
 
 template(name="copyCardPopup")
   label(for='copy-card-title') {{_ 'title'}}:

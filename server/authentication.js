@@ -1,4 +1,18 @@
+import Fiber from 'fibers';
+
 Meteor.startup(() => {
+
+  // Node Fibers 100% CPU usage issue
+  // https://github.com/wekan/wekan-mongodb/issues/2#issuecomment-381453161
+  // https://github.com/meteor/meteor/issues/9796#issuecomment-381676326
+  // https://github.com/sandstorm-io/sandstorm/blob/0f1fec013fe7208ed0fd97eb88b31b77e3c61f42/shell/server/00-startup.js#L99-L129
+  Fiber.poolSize = 1e9;
+
+  Accounts.validateLoginAttempt(function (options) {
+    const user = options.user || {};
+    return !user.loginDisabled;
+  });
+
   Authentication = {};
 
   Authentication.checkUserId = function (userId) {

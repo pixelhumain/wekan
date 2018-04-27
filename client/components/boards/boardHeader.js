@@ -58,10 +58,6 @@ BlazeComponent.extendComponent({
     return user && user.hasStarred(boardId);
   },
 
-  isMiniScreen() {
-    return Utils.isMiniScreen();
-  },
-
   // Only show the star counter if the number of star is greater than 2
   showStarCounter() {
     const currentBoard = Boards.findOne(Session.get('currentBoard'));
@@ -80,6 +76,14 @@ BlazeComponent.extendComponent({
       'click .js-open-archived-board'() {
         Modal.open('archivedBoards');
       },
+      'click .js-toggle-board-view'() {
+        const currentUser = Meteor.user();
+        if (currentUser.profile.boardView === 'board-view-swimlanes') {
+          currentUser.setBoardView('board-view-lists');
+        } else if (currentUser.profile.boardView === 'board-view-lists') {
+          currentUser.setBoardView('board-view-swimlanes');
+        }
+      },
       'click .js-open-filter-view'() {
         Sidebar.setView('filter');
       },
@@ -87,6 +91,9 @@ BlazeComponent.extendComponent({
         evt.stopPropagation();
         Sidebar.setView();
         Filter.reset();
+      },
+      'click .js-open-search-view'() {
+        Sidebar.setView('search');
       },
       'click .js-multiselection-activate'() {
         const currentCard = Session.get('currentCard');
@@ -167,6 +174,11 @@ const CreateBoard = BlazeComponent.extendComponent({
       title,
       permission: visibility,
     }));
+
+    Swimlanes.insert({
+      title: 'Default',
+      boardId: this.boardId.get(),
+    });
 
     Utils.goBoardId(this.boardId.get());
   },

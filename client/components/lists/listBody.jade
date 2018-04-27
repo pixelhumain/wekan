@@ -1,10 +1,10 @@
 template(name="listBody")
   .list-body.js-perfect-scrollbar
-    .minicards.clearfix.js-minicards
+    .minicards.clearfix.js-minicards(class="{{#if reachedWipLimit}}js-list-full{{/if}}")
       if cards.count
         +inlinedForm(autoclose=false position="top")
           +addCardForm(listId=_id position="top")
-      each cards
+      each (cards (idOrNull ../../_id))
         a.minicard-wrapper.js-minicard(href=absoluteUrl
           class="{{#if cardIsSelected}}is-selected{{/if}}"
           class="{{#if MultiSelection.isSelected _id}}is-checked{{/if}}")

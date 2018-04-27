@@ -4,6 +4,7 @@ const defaultView = 'home';
 
 const viewTitles = {
   filter: 'filter-cards',
+  search: 'search-cards',
   multiselection: 'multi-selection',
   archives: 'archives',
 };
@@ -153,21 +154,25 @@ Template.memberPopup.events({
     Boards.findOne(boardId).removeMember(memberId);
     Popup.close();
   }),
-  'click .js-leave-member'() {
+  'click .js-leave-member': Popup.afterConfirm('leaveBoard', () => {
     const boardId = Session.get('currentBoard');
-    Meteor.call('quitBoard', boardId, (err, ret) => {
-      if (!ret && ret) {
-        Popup.close();
-        FlowRouter.go('home');
-      }
+    Meteor.call('quitBoard', boardId, () => {
+      Popup.close();
+      FlowRouter.go('home');
     });
-  },
+  }),
 });
 
 Template.removeMemberPopup.helpers({
   user() {
     return Users.findOne(this.userId);
   },
+  board() {
+    return Boards.findOne(Session.get('currentBoard'));
+  },
+});
+
+Template.leaveBoardPopup.helpers({
   board() {
     return Boards.findOne(Session.get('currentBoard'));
   },

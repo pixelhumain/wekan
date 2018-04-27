@@ -36,6 +36,14 @@ BlazeComponent.extendComponent({
     const members = formComponent.members.get();
     const labelIds = formComponent.labels.get();
 
+    const boardId = this.data().board()._id;
+    let swimlaneId = '';
+    const boardView = Meteor.user().profile.boardView;
+    if (boardView === 'board-view-swimlanes')
+      swimlaneId = this.parentComponent().parentComponent().data()._id;
+    else if (boardView === 'board-view-lists')
+      swimlaneId = Swimlanes.findOne({boardId})._id;
+
     if (title) {
       const _id = Cards.insert({
         title,
@@ -44,6 +52,7 @@ BlazeComponent.extendComponent({
         listId: this.data()._id,
         boardId: this.data().board()._id,
         sort: sortIndex,
+        swimlaneId,
       });
       // In case the filter is active we need to add the newly inserted card in
       // the list of exceptions -- cards that are not filtered. Otherwise the
@@ -94,6 +103,22 @@ BlazeComponent.extendComponent({
     evt.stopPropagation();
     evt.preventDefault();
     MultiSelection.toggle(this.currentData()._id);
+  },
+
+  idOrNull(swimlaneId) {
+    const currentUser = Meteor.user();
+    if (currentUser.profile.boardView === 'board-view-swimlanes')
+      return swimlaneId;
+    return undefined;
+  },
+
+  canSeeAddCard() {
+    return !this.reachedWipLimit() && Meteor.user() && Meteor.user().isBoardMember() && !Meteor.user().isCommentOnly();
+  },
+
+  reachedWipLimit() {
+    const list = Template.currentData();
+    return !list.getWipLimit('soft') && list.getWipLimit('enabled') && list.getWipLimit('value') <= list.cards().count();
   },
 
   events() {
@@ -239,10 +264,3 @@ BlazeComponent.extendComponent({
     });
   },
 }).register('addCardForm');
-
-
-Template.listBody.helpers({
-  canSeeAddCard() {
-    return Meteor.user() && Meteor.user().isBoardMember() && !Meteor.user().isCommentOnly();
-  },
-});

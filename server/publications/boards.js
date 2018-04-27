@@ -73,6 +73,7 @@ Meteor.publishRelations('board', function(boardId) {
     ],
   }, { limit: 1 }), function(boardId, board) {
     this.cursor(Lists.find({ boardId }));
+    this.cursor(Swimlanes.find({ boardId }));
     this.cursor(Integrations.find({ boardId }));
 
     // Cards and cards comments
@@ -100,6 +101,7 @@ Meteor.publishRelations('board', function(boardId) {
       this.cursor(CardComments.find({ cardId }));
       this.cursor(Attachments.find({ cardId }));
       this.cursor(Checklists.find({ cardId }));
+      this.cursor(ChecklistItems.find({ cardId }));
     });
 
     if (board.members) {

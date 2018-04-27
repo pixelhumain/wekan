@@ -3,10 +3,11 @@ template(name="headerUserBar")
     a.header-user-bar-name.js-open-header-member-menu
       .header-user-bar-avatar
         +userAvatar(userId=currentUser._id)
-      if currentUser.profile.fullname
-        = currentUser.profile.fullname
-      else
-        = currentUser.username
+      unless isMiniScreen
+        if currentUser.profile.fullname
+          = currentUser.profile.fullname
+        else
+          = currentUser.username
 
 template(name="memberMenuPopup")
   ul.pop-over-list
@@ -83,5 +84,5 @@ template(name="changeSettingsPopup")
     li
       label.bold
         | {{_ 'show-cards-minimum-count'}}
-      input#show-cards-count-at.inline-input.left(type="number" value="#{showCardsCountAt}" min="1" max="99" onkeydown="return false")
+      input#show-cards-count-at.inline-input.left(type="number" value="#{showCardsCountAt}" min="0" max="99" onkeydown="return false")
       input.js-apply-show-cards-at.left(type="submit" value="{{_ 'apply'}}")

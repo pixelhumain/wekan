@@ -23,6 +23,9 @@ Activities.helpers({
   list() {
     return Lists.findOne(this.listId);
   },
+  swimlane() {
+    return Swimlanes.findOne(this.swimlaneId);
+  },
   oldList() {
     return Lists.findOne(this.oldListId);
   },
@@ -39,7 +42,7 @@ Activities.helpers({
     return Checklists.findOne(this.checklistId);
   },
   checklistItem() {
-    return Checklists.findOne(this.checklistId).getItem(this.checklistItemId);
+    return ChecklistItems.findOne(this.checklistItemId);
   },
 });
 
@@ -110,6 +113,7 @@ if (Meteor.isServer) {
     if (activity.commentId) {
       const comment = activity.comment();
       params.comment = comment.text;
+      params.commentId = comment._id;
     }
     if (activity.attachmentId) {
       const attachment = activity.attachment();
@@ -118,6 +122,10 @@ if (Meteor.isServer) {
     if (activity.checklistId) {
       const checklist = activity.checklist();
       params.checklist = checklist.title;
+    }
+    if (activity.checklistItemId) {
+      const checklistItem = activity.checklistItem();
+      params.checklistItem = checklistItem.title;
     }
     if (board) {
       const watchingUsers = _.pluck(_.where(board.watchers, {level: 'watching'}), 'userId');

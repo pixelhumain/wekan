@@ -22,7 +22,9 @@ const sandstormBoard = {
 
 if (isSandstorm && Meteor.isServer) {
   const fs = require('fs');
-  const Capnp = require('capnp');
+  const pathParts = process.cwd().split('/');
+  const path = pathParts.join('/');
+  const Capnp = Npm.require(`${path}../../../node_modules/capnp.js`);
   const Package = Capnp.importSystem('sandstorm/package.capnp');
   const Powerbox = Capnp.importSystem('sandstorm/powerbox.capnp');
   const Identity = Capnp.importSystem('sandstorm/identity.capnp');
@@ -250,6 +252,10 @@ if (isSandstorm && Meteor.isServer) {
   Users.after.insert((userId, doc) => {
     if (!Boards.findOne(sandstormBoard._id)) {
       Boards.insert(sandstormBoard, { validate: false });
+      Swimlanes.insert({
+        title: 'Default',
+        boardId: sandstormBoard._id,
+      });
       Activities.update(
         { activityTypeId: sandstormBoard._id },
         { $set: { userId: doc._id }}

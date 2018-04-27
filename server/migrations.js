@@ -109,9 +109,9 @@ Migrations.add('add-member-isactive-field', () => {
   Boards.find({}, {fields: {members: 1}}).forEach((board) => {
     const allUsersWithSomeActivity = _.chain(
       Activities.find({ boardId: board._id }, { fields:{ userId:1 }}).fetch())
-        .pluck('userId')
-        .uniq()
-        .value();
+      .pluck('userId')
+      .uniq()
+      .value();
     const currentUsers = _.pluck(board.members, 'userId');
     const formerUsers = _.difference(allUsersWithSomeActivity, currentUsers);
 
@@ -128,5 +128,94 @@ Migrations.add('add-member-isactive-field', () => {
       });
     });
     Boards.update(board._id, {$set: {members: newMemberSet}}, noValidate);
+  });
+});
+
+Migrations.add('add-sort-checklists', () => {
+  Checklists.find().forEach((checklist, index) => {
+    if (!checklist.hasOwnProperty('sort')) {
+      Checklists.direct.update(
+        checklist._id,
+        { $set: { sort: index } },
+        noValidate
+      );
+    }
+    checklist.items.find().forEach((item, index) => {
+      if (!item.hasOwnProperty('sort')) {
+        Checklists.direct.update(
+          { _id: checklist._id, 'items._id': item._id },
+          { $set: { 'items.$.sort': index } },
+          noValidate
+        );
+      }
+    });
+  });
+});
+
+Migrations.add('add-swimlanes', () => {
+  Boards.find().forEach((board) => {
+    const swimlane = Swimlanes.findOne({ boardId: board._id });
+    let swimlaneId = '';
+    if (swimlane)
+      swimlaneId = swimlane._id;
+    else
+      swimlaneId = Swimlanes.direct.insert({
+        boardId: board._id,
+        title: 'Default',
+      });
+
+    Cards.find({ boardId: board._id }).forEach((card) => {
+      if (!card.hasOwnProperty('swimlaneId')) {
+        Cards.direct.update(
+            { _id: card._id },
+            { $set: { swimlaneId } },
+            noValidate
+        );
+      }
+    });
+  });
+});
+
+Migrations.add('add-views', () => {
+  Boards.find().forEach((board) => {
+    if (!board.hasOwnProperty('view')) {
+      Boards.direct.update(
+          { _id: board._id },
+          { $set: { view: 'board-view-swimlanes' } },
+          noValidate
+      );
+    }
+  });
+});
+
+Migrations.add('add-checklist-items', () => {
+  Checklists.find().forEach((checklist) => {
+    // Create new items
+    _.sortBy(checklist.items, 'sort').forEach((item, index) => {
+      ChecklistItems.direct.insert({
+        title: item.title,
+        sort: index,
+        isFinished: item.isFinished,
+        checklistId: checklist._id,
+        cardId: checklist.cardId,
+      });
+    });
+
+    // Delete old ones
+    Checklists.direct.update({ _id: checklist._id },
+      { $unset: { items : 1 } },
+      noValidate
+    );
+  });
+});
+
+Migrations.add('add-profile-view', () => {
+  Users.find().forEach((user) => {
+    // Set default view
+    Users.direct.update(
+      { _id: user._id },
+      { $set: { 'profile.boardView': 'board-view-lists' } },
+      noValidate
+    );
   });
 });

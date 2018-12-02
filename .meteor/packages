@@ -82,6 +82,6 @@ staringatlights:flow-router
 mixmax:smart-disconnect
 accounts-password@1.5.0
 cfs:gridfs
-browser-policy
+#browser-policy
 eluck:accounts-lockout
 communecter:account

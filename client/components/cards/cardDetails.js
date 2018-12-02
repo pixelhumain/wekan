@@ -222,10 +222,7 @@ Template.cardDetailsActionsPopup.events({
   'click .js-spent-time': Popup.open('editCardSpentTime'),
   'click .js-move-card': Popup.open('moveCard'),
   'click .js-copy-card': Popup.open('copyCard'),
-<<<<<<< HEAD
-=======
   'click .js-copy-checklist-cards': Popup.open('copyChecklistToManyCards'),
->>>>>>> 25668eb7c4ec69b1788c4296950792e38963c834
   'click .js-move-card-to-top' (evt) {
     evt.preventDefault();
     const minOrder = _.min(this.list().cards(this.swimlaneId).map((c) => c.sort));
@@ -266,11 +263,7 @@ Template.editCardTitleForm.events({
 });
 
 Template.moveCardPopup.events({
-<<<<<<< HEAD
-  'click .js-select-list' () {
-=======
   'click .js-done' () {
->>>>>>> 25668eb7c4ec69b1788c4296950792e38963c834
     // XXX We should *not* get the currentCard from the global state, but
     // instead from a “component” state.
     const card = Cards.findOne(Session.get('currentCard'));
@@ -283,21 +276,6 @@ Template.moveCardPopup.events({
   },
 });
 
-<<<<<<< HEAD
-Template.copyCardPopup.events({
-  'click .js-select-list' (evt) {
-    const card = Cards.findOne(Session.get('currentCard'));
-    const oldId = card._id;
-    card._id = null;
-    card.listId = this._id;
-    const textarea = $(evt.currentTarget).parents('.content').find('textarea');
-    const title = textarea.val().trim();
-    // insert new card to the bottom of new list
-    card.sort = Lists.findOne(this._id).cards().count();
-
-    if (title) {
-      card.title = title;
-=======
 BlazeComponent.extendComponent({
   onCreated() {
     subManager.subscribe('board', Session.get('currentBoard'));
@@ -353,7 +331,6 @@ Template.copyCardPopup.events({
     if (title) {
       card.title = title;
       card.coverId = '';
->>>>>>> 25668eb7c4ec69b1788c4296950792e38963c834
       const _id = Cards.insert(card);
       // In case the filter is active we need to add the newly inserted card in
       // the list of exceptions -- cards that are not filtered. Otherwise the
@@ -366,11 +343,6 @@ Template.copyCardPopup.events({
       cursor.forEach(function() {
         'use strict';
         const checklist = arguments[0];
-<<<<<<< HEAD
-        checklist.cardId = _id;
-        checklist._id = null;
-        Checklists.insert(checklist);
-=======
         const checklistId = checklist._id;
         checklist.cardId = _id;
         checklist._id = null;
@@ -381,7 +353,6 @@ Template.copyCardPopup.events({
           item.cardId = _id;
           ChecklistItems.insert(item);
         });
->>>>>>> 25668eb7c4ec69b1788c4296950792e38963c834
       });
 
       // copy card comments
@@ -398,8 +369,6 @@ Template.copyCardPopup.events({
   },
 });
 
-<<<<<<< HEAD
-=======
 Template.copyChecklistToManyCardsPopup.events({
   'click .js-done' () {
     const card = Cards.findOne(Session.get('currentCard'));
@@ -463,7 +432,6 @@ Template.copyChecklistToManyCardsPopup.events({
 });
 
 
->>>>>>> 25668eb7c4ec69b1788c4296950792e38963c834
 Template.cardMorePopup.events({
   'click .js-copy-card-link-to-clipboard' () {
     // Clipboard code from:

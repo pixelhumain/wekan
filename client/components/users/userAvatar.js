@@ -1,5 +1,3 @@
-Meteor.subscribe('my-avatars');
-
 Template.userAvatar.helpers({
   userData() {
     // We need to handle a special case for the search results provided by the
@@ -54,6 +52,8 @@ Template.userAvatarInitials.helpers({
 BlazeComponent.extendComponent({
   onCreated() {
     this.error = new ReactiveVar('');
+
+    Meteor.subscribe('my-avatars');
   },
 
   avatarUrlOptions() {
@@ -134,8 +134,9 @@ BlazeComponent.extendComponent({
 
 Template.cardMembersPopup.helpers({
   isCardMember() {
-    const cardId = Template.parentData()._id;
-    const cardMembers = Cards.findOne(cardId).members || [];
+    const card = Template.parentData();
+    const cardMembers = card.getMembers();
+
     return _.contains(cardMembers, this.userId);
   },
 

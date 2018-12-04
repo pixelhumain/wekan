@@ -23,6 +23,8 @@ export class TrelloCreator {
 
     // Map of labels Trello ID => Wekan ID
     this.labels = {};
+    // Default swimlane
+    this.swimlane = null;
     // Map of lists Trello ID => Wekan ID
     this.lists = {};
     // Map of cards Trello ID => Wekan ID
@@ -113,7 +115,6 @@ export class TrelloCreator {
     check(trelloLabels, [Match.ObjectIncluding({
       // XXX refine control by validating 'color' against a list of allowed
       // values (is it worth the maintenance?)
-      color: String,
       name: String,
     })]);
   }
@@ -149,7 +150,9 @@ export class TrelloCreator {
         userId: Meteor.userId(),
         isAdmin: true,
         isActive: true,
+        isNoComments: false,
         isCommentOnly: false,
+        swimlaneId: false,
       }],
       permission: this.getPermission(trelloBoard.prefs.permissionLevel),
       slug: getSlug(trelloBoard.name) || 'board',
@@ -175,7 +178,9 @@ export class TrelloCreator {
               userId: wekanId,
               isAdmin: this.getAdmin(trelloMembership.memberType),
               isActive: true,
+              isNoComments: false,
               isCommentOnly: false,
+              swimlaneId: false,
             });
           }
         }
@@ -184,7 +189,7 @@ export class TrelloCreator {
     trelloBoard.labels.forEach((label) => {
       const labelToCreate = {
         _id: Random.id(6),
-        color: label.color,
+        color: label.color ? label.color : 'black',
         name: label.name,
       };
       // We need to remember them by Trello ID, as this is the only ref we have
@@ -229,6 +234,7 @@ export class TrelloCreator {
         dateLastActivity: this._now(),
         description: card.desc,
         listId: this.lists[card.idList],
+        swimlaneId: this.swimlane,
         sort: card.pos,
         title: card.name,
         // we attribute the card to its creator if available
@@ -375,6 +381,7 @@ export class TrelloCreator {
         // we require.
         createdAt: this._now(this.createdAt.lists[list.id]),
         title: list.name,
+        sort: list.pos,
       };
       const listId = Lists.direct.insert(listToCreate);
       Lists.direct.update(listId, {$set: {'updatedAt': this._now()}});
@@ -396,27 +403,51 @@ export class TrelloCreator {
     });
   }
 
+  createSwimlanes(boardId) {
+    const swimlaneToCreate = {
+      archived: false,
+      boardId,
+      // We are being defensing here by providing a default date (now) if the
+      // creation date wasn't found on the action log. This happen on old
+      // Wekan boards (eg from 2013) that didn't log the 'createList' action
+      // we require.
+      createdAt: this._now(),
+      title: 'Default',
+      sort: 1,
+    };
+    const swimlaneId = Swimlanes.direct.insert(swimlaneToCreate);
+    Swimlanes.direct.update(swimlaneId, {$set: {'updatedAt': this._now()}});
+    this.swimlane = swimlaneId;
+  }
+
   createChecklists(trelloChecklists) {
     trelloChecklists.forEach((checklist) => {
-      // Create the checklist
-      const checklistToCreate = {
-        cardId: this.cards[checklist.idCard],
-        title: checklist.name,
-        createdAt: this._now(),
-      };
-      const checklistId = Checklists.direct.insert(checklistToCreate);
-      // keep track of Trello id => WeKan id
-      this.checklists[checklist.id] = checklistId;
-      // Now add the items to the checklist
-      const itemsToCreate = [];
-      checklist.checkItems.forEach((item) => {
-        itemsToCreate.push({
-          _id: checklistId + itemsToCreate.length,
-          title: item.name,
-          isFinished: item.state === 'complete',
+      if (this.cards[checklist.idCard]) {
+        // Create the checklist
+        const checklistToCreate = {
+          cardId: this.cards[checklist.idCard],
+          title: checklist.name,
+          createdAt: this._now(),
+          sort: checklist.pos,
+        };
+        const checklistId = Checklists.direct.insert(checklistToCreate);
+        // keep track of Trello id => WeKan id
+        this.checklists[checklist.id] = checklistId;
+        // Now add the items to the checklistItems
+        let counter = 0;
+        checklist.checkItems.forEach((item) => {
+          counter++;
+          const checklistItemTocreate = {
+            _id: checklistId + counter,
+            title: item.name,
+            checklistId: this.checklists[checklist.id],
+            cardId: this.cards[checklist.idCard],
+            sort: item.pos,
+            isFinished: item.state === 'complete',
+          };
+          ChecklistItems.direct.insert(checklistItemTocreate);
         });
-      });
-      Checklists.direct.update(checklistId, {$set: {items: itemsToCreate}});
+      }
     });
   }
 
@@ -602,6 +633,7 @@ export class TrelloCreator {
     this.parseActions(board.actions);
     const boardId = this.createBoardAndLabels(board);
     this.createLists(board.lists, boardId);
+    this.createSwimlanes(boardId);
     this.createCards(board.cards, boardId);
     this.createChecklists(board.checklists);
     this.importActions(board.actions, boardId);

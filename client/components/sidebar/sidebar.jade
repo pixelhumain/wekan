@@ -23,10 +23,11 @@ template(name='homeSidebar')
   hr
   +labelsWidget
   hr
-  h3
-    i.fa.fa-comments-o
-    | {{_ 'activities'}}
-  +activities(mode="board")
+  unless currentUser.isNoComments
+    h3
+      i.fa.fa-comments-o
+      | {{_ 'activities'}}
+    +activities(mode="board")
 
 template(name="membersWidget")
   .board-widget.board-widget-members
@@ -82,22 +83,26 @@ template(name="memberPopup")
     ul.pop-over-list
       li
         a.js-filter-member {{_ 'filter-cards'}}
-      if currentUser.isBoardAdmin
-        unless isSandstorm
+      unless isSandstorm
+        if currentUser.isBoardAdmin
           li
             a.js-change-role
               | {{_ 'change-permissions'}}
               span.quiet (#{memberType})
-          li
-            if $eq currentUser._id userId
-              a.js-leave-member {{_ 'leave-board'}}
-            else
-              a.js-remove-member {{_ 'remove-from-board'}}
+        li
+          if $eq currentUser._id userId
+            a.js-leave-member {{_ 'leave-board'}}
+          else if currentUser.isBoardAdmin
+            a.js-remove-member {{_ 'remove-from-board'}}
 
 
 template(name="removeMemberPopup")
   p {{_ 'remove-member-pop' name=user.profile.fullname username=user.username boardTitle=board.title}}
   button.js-confirm.negate.full(type="submit") {{_ 'remove-member'}}
+
+template(name="leaveBoardPopup")
+  p {{_ 'leave-board-pop' boardTitle=board.title}}
+  button.js-confirm.negate.full(type="submit") {{_ 'leave-board'}}
 
 template(name="addMemberPopup")
   .js-search-member
@@ -140,6 +145,12 @@ template(name="changePermissionsPopup")
         if isNormal
           i.fa.fa-check
         span.sub-name {{_ 'normal-desc'}}
+    li
+      a(class="{{#if isLastAdmin}}disabled{{else}}js-set-no-comments{{/if}}")
+        | {{_ 'no-comments'}}
+        if isNoComments
+          i.fa.fa-check
+        span.sub-name {{_ 'no-comments-desc'}}
     li
       a(class="{{#if isLastAdmin}}disabled{{else}}js-set-comment-only{{/if}}")
         | {{_ 'comment-only'}}

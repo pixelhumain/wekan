@@ -43,7 +43,9 @@ Users.attachSchema(new SimpleSchema({
     optional: true,
     autoValue() { // eslint-disable-line consistent-return
       if (this.isInsert && !this.isSet) {
-        return {};
+        return {
+          boardView: 'board-view-lists',
+        };
       }
     },
   },
@@ -87,13 +89,18 @@ Users.attachSchema(new SimpleSchema({
     type: [String],
     optional: true,
   },
-  'profile.tags': {
-    type: [String],
-    optional: true,
-  },
   'profile.icode': {
     type: String,
     optional: true,
+  },
+  'profile.boardView': {
+    type: String,
+    optional: true,
+    allowedValues: [
+      'board-view-lists',
+      'board-view-swimlanes',
+      'board-view-cal',
+    ],
   },
   services: {
     type: Object,
@@ -108,7 +115,27 @@ Users.attachSchema(new SimpleSchema({
     type: Boolean,
     optional: true,
   },
+  createdThroughApi: {
+    type: Boolean,
+    optional: true,
+  },
+  loginDisabled: {
+    type: Boolean,
+    optional: true,
+  },
+  'authenticationMethod': {
+    type: String,
+    optional: false,
+    defaultValue: 'password',
+  },
 }));
+
+Users.allow({
+  update(userId) {
+    const user = Users.findOne(userId);
+    return user && Meteor.user().isAdmin;
+  },
+});
 
 // Search a user in the complete server database by its name or username. This
 // is used for instance to add a new user to a board.
@@ -123,6 +150,16 @@ if (Meteor.isClient) {
     isBoardMember() {
       const board = Boards.findOne(Session.get('currentBoard'));
       return board && board.hasMember(this._id);
+    },
+
+    isNotNoComments() {
+      const board = Boards.findOne(Session.get('currentBoard'));
+      return board && board.hasMember(this._id) && !board.hasNoComments(this._id);
+    },
+
+    isNoComments() {
+      const board = Boards.findOne(Session.get('currentBoard'));
+      return board && board.hasNoComments(this._id);
     },
 
     isNotCommentOnly() {
@@ -144,36 +181,36 @@ if (Meteor.isClient) {
 
 Users.helpers({
   boards() {
-    return Boards.find({ userId: this._id });
+    return Boards.find({ 'members.userId': this._id });
   },
 
   starredBoards() {
-    const { starredBoards = [] } = this.profile;
-    return Boards.find({ archived: false, _id: { $in: starredBoards } });
+    const {starredBoards = []} = this.profile;
+    return Boards.find({archived: false, _id: {$in: starredBoards}});
   },
 
   hasStarred(boardId) {
-    const { starredBoards = [] } = this.profile;
+    const {starredBoards = []} = this.profile;
     return _.contains(starredBoards, boardId);
   },
 
   invitedBoards() {
-    const { invitedBoards = [] } = this.profile;
-    return Boards.find({ archived: false, _id: { $in: invitedBoards } });
+    const {invitedBoards = []} = this.profile;
+    return Boards.find({archived: false, _id: {$in: invitedBoards}});
   },
 
   isInvitedTo(boardId) {
-    const { invitedBoards = [] } = this.profile;
+    const {invitedBoards = []} = this.profile;
     return _.contains(invitedBoards, boardId);
   },
 
   hasTag(tag) {
-    const { tags = [] } = this.profile;
+    const {tags = []} = this.profile;
     return _.contains(tags, tag);
   },
 
   hasNotification(activityId) {
-    const { notifications = [] } = this.profile;
+    const {notifications = []} = this.profile;
     return _.contains(notifications, activityId);
   },
 
@@ -183,7 +220,7 @@ Users.helpers({
   },
 
   getEmailBuffer() {
-    const { emailBuffer = [] } = this.profile;
+    const {emailBuffer = []} = this.profile;
     return emailBuffer;
   },
 
@@ -308,22 +345,30 @@ Users.mutations({
   },
 
   setAvatarUrl(avatarUrl) {
-    return { $set: { 'profile.avatarUrl': avatarUrl } };
+    return {$set: {'profile.avatarUrl': avatarUrl}};
   },
 
   setShowCardsCountAt(limit) {
-    return { $set: { 'profile.showCardsCountAt': limit } };
+    return {$set: {'profile.showCardsCountAt': limit}};
+  },
+
+  setBoardView(view) {
+    return {
+      $set : {
+        'profile.boardView': view,
+      },
+    };
   },
 });
 
 Meteor.methods({
-  setUsername(username) {
+  setUsername(username, userId) {
     check(username, String);
-    const nUsersWithUsername = Users.find({ username }).count();
+    const nUsersWithUsername = Users.find({username}).count();
     if (nUsersWithUsername > 0) {
       throw new Meteor.Error('username-already-taken');
     } else {
-      Users.update(this.userId, { $set: { username } });
+      Users.update(userId, {$set: {username}});
     }
   },
   toggleSystemMessages() {
@@ -334,13 +379,13 @@ Meteor.methods({
     check(limit, Number);
     Meteor.user().setShowCardsCountAt(limit);
   },
-  setEmail(email) {
+  setEmail(email, userId) {
     check(email, String);
-    const existingUser = Users.findOne({ 'emails.address': email }, { fields: { _id: 1 } });
+    const existingUser = Users.findOne({'emails.address': email}, {fields: {_id: 1}});
     if (existingUser) {
       throw new Meteor.Error('email-already-taken');
     } else {
-      Users.update(this.userId, {
+      Users.update(userId, {
         $set: {
           emails: [{
             address: email,
@@ -350,11 +395,19 @@ Meteor.methods({
       });
     }
   },
-  setUsernameAndEmail(username, email) {
+  setUsernameAndEmail(username, email, userId) {
     check(username, String);
     check(email, String);
-    Meteor.call('setUsername', username);
-    Meteor.call('setEmail', email);
+    check(userId, String);
+    Meteor.call('setUsername', username, userId);
+    Meteor.call('setEmail', email, userId);
+  },
+  setPassword(newPassword, userId) {
+    check(userId, String);
+    check(newPassword, String);
+    if(Meteor.user().isAdmin){
+      Accounts.setPassword(userId, newPassword);
+    }
   },
 });
 
@@ -371,8 +424,8 @@ if (Meteor.isServer) {
         board &&
         board.members &&
         _.contains(_.pluck(board.members, 'userId'), inviter._id) &&
-        _.where(board.members, { userId: inviter._id })[0].isActive &&
-        _.where(board.members, { userId: inviter._id })[0].isAdmin;
+        _.where(board.members, {userId: inviter._id})[0].isActive &&
+        _.where(board.members, {userId: inviter._id})[0].isAdmin;
       if (!allowInvite) throw new Meteor.Error('error-board-notAMember');
 
       this.unblock();
@@ -380,9 +433,9 @@ if (Meteor.isServer) {
       const posAt = username.indexOf('@');
       let user = null;
       if (posAt >= 0) {
-        user = Users.findOne({ emails: { $elemMatch: { address: username } } });
+        user = Users.findOne({emails: {$elemMatch: {address: username}}});
       } else {
-        user = Users.findOne(username) || Users.findOne({ username });
+        user = Users.findOne(username) || Users.findOne({username});
       }
       if (user) {
         if (user._id === inviter._id) throw new Meteor.Error('error-user-notAllowSelf');
@@ -392,7 +445,7 @@ if (Meteor.isServer) {
         // Set in lowercase email before creating account
         const email = username.toLowerCase();
         username = email.substring(0, posAt);
-        const newUserId = Accounts.createUser({ username, email });
+        const newUserId = Accounts.createUser({username, email});
         if (!newUserId) throw new Meteor.Error('error-user-notCreated');
         // assume new user speak same language with inviter
         if (inviter.profile && inviter.profile.language) {
@@ -426,7 +479,7 @@ if (Meteor.isServer) {
       } catch (e) {
         throw new Meteor.Error('email-fail', e.message);
       }
-      return { username: user.username, email: user.emails[0].address };
+      return {username: user.username, email: user.emails[0].address};
     },
   });
   Accounts.onCreateUser((options, user) => {
@@ -435,22 +488,65 @@ if (Meteor.isServer) {
       user.isAdmin = true;
       return user;
     }
+
+    if (user.services.oidc) {
+      const email = user.services.oidc.email.toLowerCase();
+      user.username = user.services.oidc.username;
+      user.emails = [{ address: email, verified: true }];
+      const initials = user.services.oidc.fullname.match(/\b[a-zA-Z]/g).join('').toUpperCase();
+      user.profile = { initials, fullname: user.services.oidc.fullname };
+      user.authenticationMethod = 'oauth2';
+
+      // see if any existing user has this email address or username, otherwise create new
+      const existingUser = Meteor.users.findOne({$or: [{'emails.address': email}, {'username':user.username}]});
+      if (!existingUser)
+        return user;
+
+      // copy across new service info
+      const service = _.keys(user.services)[0];
+      existingUser.services[service] = user.services[service];
+      existingUser.emails = user.emails;
+      existingUser.username = user.username;
+      existingUser.profile = user.profile;
+      existingUser.authenticationMethod = user.authenticationMethod;
+
+      Meteor.users.remove({_id: existingUser._id}); // remove existing record
+      return existingUser;
+    }
+
+    if (options.from === 'admin') {
+      user.createdThroughApi = true;
+      return user;
+    }
+
     const disableRegistration = Settings.findOne().disableRegistration;
-    if (!disableRegistration) {
+    // If ldap, bypass the inviation code if the self registration isn't allowed.
+    // TODO : pay attention if ldap field in the user model change to another content ex : ldap field to connection_type
+    if (options.ldap || !disableRegistration) {
+      user.authenticationMethod = 'ldap';
       return user;
     }
 
     if (!options || !options.profile) {
       throw new Meteor.Error('error-invitation-code-blank', 'The invitation code is required');
     }
-    const invitationCode = InvitationCodes.findOne({ code: options.profile.invitationcode, email: options.email, valid: true });
+    const invitationCode = InvitationCodes.findOne({
+      code: options.profile.invitationcode,
+      email: options.email,
+      valid: true,
+    });
     if (!invitationCode) {
       throw new Meteor.Error('error-invitation-code-not-exist', 'The invitation code doesn\'t exist');
     } else {
-      user.profile = { icode: options.profile.invitationcode };
-    }
+      user.profile = {icode: options.profile.invitationcode};
+      user.profile.boardView = 'board-view-lists';
 
-    return user;
+      // Deletes the invitation code after the user was created successfully.
+      setTimeout(Meteor.bindEnvironment(() => {
+        InvitationCodes.remove({'_id': invitationCode._id});
+      }), 200);
+      return user;
+    }
   });
 }
 
@@ -459,7 +555,7 @@ if (Meteor.isServer) {
   Meteor.startup(() => {
     Users._collection._ensureIndex({
       username: 1,
-    }, { unique: true });
+    }, {unique: true});
   });
 
   // Each board document contains the de-normalized number of users that have
@@ -478,6 +574,7 @@ if (Meteor.isServer) {
     function getStarredBoardsIds(doc) {
       return doc.profile && doc.profile.starredBoards;
     }
+
     const oldIds = getStarredBoardsIds(this.previous);
     const newIds = getStarredBoardsIds(user);
 
@@ -486,9 +583,10 @@ if (Meteor.isServer) {
     // direction and then in the other.
     function incrementBoards(boardsIds, inc) {
       boardsIds.forEach((boardId) => {
-        Boards.update(boardId, { $inc: { stars: inc } });
+        Boards.update(boardId, {$inc: {stars: inc}});
       });
     }
+
     incrementBoards(_.difference(oldIds, newIds), -1);
     incrementBoards(_.difference(newIds, oldIds), +1);
   });
@@ -514,8 +612,14 @@ if (Meteor.isServer) {
           permission: 'private',
         }, fakeUser, (err, boardId) => {
 
-          ['welcome-list1', 'welcome-list2'].forEach((title) => {
-            Lists.insert({ title: TAPi18n.__(title), boardId }, fakeUser);
+          Swimlanes.insert({
+            title: TAPi18n.__('welcome-swimlane'),
+            boardId,
+            sort: 1,
+          }, fakeUser);
+
+          ['welcome-list1', 'welcome-list2'].forEach((title, titleIndex) => {
+            Lists.insert({title: TAPi18n.__(title), boardId, sort: titleIndex}, fakeUser);
           });
         });
       });
@@ -524,10 +628,23 @@ if (Meteor.isServer) {
 
   Users.after.insert((userId, doc) => {
 
+    if (doc.createdThroughApi) {
+      // The admin user should be able to create a user despite disabling registration because
+      // it is two different things (registration and creation).
+      // So, when a new user is created via the api (only admin user can do that) one must avoid
+      // the disableRegistration check.
+      // Issue : https://github.com/wekan/wekan/issues/1232
+      // PR    : https://github.com/wekan/wekan/pull/1251
+      Users.update(doc._id, {$set: {createdThroughApi: ''}});
+      return;
+    }
+
     //invite user to corresponding boards
     const disableRegistration = Settings.findOne().disableRegistration;
-    if (disableRegistration) {
-      const invitationCode = InvitationCodes.findOne({ code: doc.profile.icode, valid: true });
+    // If ldap, bypass the inviation code if the self registration isn't allowed.
+    // TODO : pay attention if ldap field in the user model change to another content ex : ldap field to connection_type
+    if (doc.authenticationMethod !== 'ldap' && disableRegistration) {
+      const invitationCode = InvitationCodes.findOne({code: doc.profile.icode, valid: true});
       if (!invitationCode) {
         throw new Meteor.Error('error-invitation-code-not-exist');
       } else {
@@ -539,69 +656,239 @@ if (Meteor.isServer) {
           doc.profile = {};
         }
         doc.profile.invitedBoards = invitationCode.boardsToBeInvited;
-        Users.update(doc._id, { $set: { profile: doc.profile } });
-        InvitationCodes.update(invitationCode._id, { $set: { valid: false } });
+        Users.update(doc._id, {$set: {profile: doc.profile}});
+        InvitationCodes.update(invitationCode._id, {$set: {valid: false}});
       }
     }
   });
 }
 
-
 // USERS REST API
 if (Meteor.isServer) {
-  JsonRoutes.add('GET', '/api/user', function(req, res, next) {
-    Authentication.checkLoggedIn(req.userId);
-    const data = Meteor.users.findOne({ _id: req.userId});
-    delete data.services;
-    JsonRoutes.sendResult(res, {
-      code: 200,
-      data,
-    });
+  // Middleware which checks that API is enabled.
+  JsonRoutes.Middleware.use(function (req, res, next) {
+    const api = req.url.search('api');
+    if (api === 1 && process.env.WITH_API === 'true' || api === -1){
+      return next();
+    }
+    else {
+      res.writeHead(301, {Location: '/'});
+      return res.end();
+    }
   });
 
-  JsonRoutes.add('GET', '/api/users', function (req, res, next) {
-    Authentication.checkUserId( req.userId);
-    JsonRoutes.sendResult(res, {
-      code: 200,
-      data: Meteor.users.find({}).map(function (doc) {
-        return { _id: doc._id, username: doc.username };
-      }),
-    });
-  });
-  JsonRoutes.add('GET', '/api/users/:id', function (req, res, next) {
-    Authentication.checkUserId( req.userId);
-    const id = req.params.id;
-    JsonRoutes.sendResult(res, {
-      code: 200,
-      data: Meteor.users.findOne({ _id: id }),
-    });
-  });
-  JsonRoutes.add('POST', '/api/users/', function (req, res, next) {
-    Authentication.checkUserId( req.userId);
-    const id = Accounts.createUser({
-      username: req.body.username,
-      email: req.body.email,
-      password: 'default',
-    });
-
-    JsonRoutes.sendResult(res, {
-      code: 200,
-      data: {
-        _id: id,
-      },
-    });
+  JsonRoutes.add('GET', '/api/user', function(req, res) {
+    try {
+      Authentication.checkLoggedIn(req.userId);
+      const data = Meteor.users.findOne({ _id: req.userId});
+      delete data.services;
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data,
+      });
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
+    }
   });
 
-  JsonRoutes.add('DELETE', '/api/users/:id', function (req, res, next) {
-    Authentication.checkUserId( req.userId);
-    const id = req.params.id;
-    Meteor.users.remove({ _id: id });
-    JsonRoutes.sendResult(res, {
-      code: 200,
-      data: {
-        _id: id,
-      },
-    });
+  JsonRoutes.add('GET', '/api/users', function (req, res) {
+    try {
+      Authentication.checkUserId(req.userId);
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: Meteor.users.find({}).map(function (doc) {
+          return { _id: doc._id, username: doc.username };
+        }),
+      });
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
+    }
+  });
+
+  JsonRoutes.add('GET', '/api/users/:userId', function (req, res) {
+    try {
+      Authentication.checkUserId(req.userId);
+      const id = req.params.userId;
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: Meteor.users.findOne({ _id: id }),
+      });
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
+    }
+  });
+
+  JsonRoutes.add('PUT', '/api/users/:userId', function (req, res) {
+    try {
+      Authentication.checkUserId(req.userId);
+      const id = req.params.userId;
+      const action = req.body.action;
+      let data = Meteor.users.findOne({ _id: id });
+      if (data !== undefined) {
+        if (action === 'takeOwnership') {
+          data = Boards.find({
+            'members.userId': id,
+            'members.isAdmin': true,
+          }).map(function(board) {
+            if (board.hasMember(req.userId)) {
+              board.removeMember(req.userId);
+            }
+            board.changeOwnership(id, req.userId);
+            return {
+              _id: board._id,
+              title: board.title,
+            };
+          });
+        } else {
+          if ((action === 'disableLogin') && (id !== req.userId)) {
+            Users.update({ _id: id }, { $set: { loginDisabled: true, 'services.resume.loginTokens': '' } });
+          } else if (action === 'enableLogin') {
+            Users.update({ _id: id }, { $set: { loginDisabled: '' } });
+          }
+          data = Meteor.users.findOne({ _id: id });
+        }
+      }
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data,
+      });
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
+    }
+  });
+
+  JsonRoutes.add('POST', '/api/boards/:boardId/members/:userId/add', function (req, res) {
+    try {
+      Authentication.checkUserId(req.userId);
+      const userId = req.params.userId;
+      const boardId = req.params.boardId;
+      const action = req.body.action;
+      const {isAdmin, isNoComments, isCommentOnly} = req.body;
+      let data = Meteor.users.findOne({ _id: userId });
+      if (data !== undefined) {
+        if (action === 'add') {
+          data = Boards.find({
+            _id: boardId,
+          }).map(function(board) {
+            if (!board.hasMember(userId)) {
+              board.addMember(userId);
+              function isTrue(data){
+                return data.toLowerCase() === 'true';
+              }
+              board.setMemberPermission(userId, isTrue(isAdmin), isTrue(isNoComments), isTrue(isCommentOnly), userId);
+            }
+            return {
+              _id: board._id,
+              title: board.title,
+            };
+          });
+        }
+      }
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: query,
+      });
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
+    }
+  });
+
+  JsonRoutes.add('POST', '/api/boards/:boardId/members/:userId/remove', function (req, res) {
+    try {
+      Authentication.checkUserId(req.userId);
+      const userId = req.params.userId;
+      const boardId = req.params.boardId;
+      const action = req.body.action;
+      let data = Meteor.users.findOne({ _id: userId });
+      if (data !== undefined) {
+        if (action === 'remove') {
+          data = Boards.find({
+            _id: boardId,
+          }).map(function(board) {
+            if (board.hasMember(userId)) {
+              board.removeMember(userId);
+            }
+            return {
+              _id: board._id,
+              title: board.title,
+            };
+          });
+        }
+      }
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: query,
+      });
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
+    }
+  });
+
+  JsonRoutes.add('POST', '/api/users/', function (req, res) {
+    try {
+      Authentication.checkUserId(req.userId);
+      const id = Accounts.createUser({
+        username: req.body.username,
+        email: req.body.email,
+        password: req.body.password,
+        from: 'admin',
+      });
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: {
+          _id: id,
+        },
+      });
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
+    }
+  });
+
+  JsonRoutes.add('DELETE', '/api/users/:userId', function (req, res) {
+    try {
+      Authentication.checkUserId(req.userId);
+      const id = req.params.userId;
+      Meteor.users.remove({ _id: id });
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: {
+          _id: id,
+        },
+      });
+    }
+    catch (error) {
+      JsonRoutes.sendResult(res, {
+        code: 200,
+        data: error,
+      });
+    }
   });
 }
-

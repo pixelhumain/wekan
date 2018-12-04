@@ -25,6 +25,7 @@ Attachments = new FS.Collection('attachments', {
   ],
 });
 
+
 if (Meteor.isServer) {
   Attachments.allow({
     insert(userId, doc) {
@@ -71,13 +72,26 @@ if (Meteor.isServer) {
     } else {
       // Don't add activity about adding the attachment as the activity
       // be imported and delete source field
-      Attachments.update( {_id: doc._id}, {$unset: { source : '' } } );
+      Attachments.update({
+        _id: doc._id,
+      }, {
+        $unset: {
+          source: '',
+        },
+      });
     }
   });
 
   Attachments.files.after.remove((userId, doc) => {
     Activities.remove({
       attachmentId: doc._id,
+    });
+    Activities.insert({
+      userId,
+      type: 'card',
+      activityType: 'deleteAttachment',
+      boardId: doc.boardId,
+      cardId: doc.cardId,
     });
   });
 }

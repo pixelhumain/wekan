@@ -11,9 +11,6 @@ Template.attachmentsGalery.events({
   'click .js-download'(event) {
     event.stopPropagation();
   },
-  'click .js-open-viewer'() {
-    // XXX Not implemented!
-  },
   'click .js-add-cover'() {
     Cards.findOne(this.cardId).setCover(this._id);
   },
@@ -60,10 +57,21 @@ Template.cardAttachmentsPopup.events({
     const card = this;
     FS.Utility.eachFile(evt, (f) => {
       const file = new FS.File(f);
-      file.boardId = card.boardId;
-      file.cardId = card._id;
+      if (card.isLinkedCard()) {
+        file.boardId = Cards.findOne(card.linkedId).boardId;
+        file.cardId = card.linkedId;
+      } else {
+        file.boardId = card.boardId;
+        file.cardId = card._id;
+      }
       file.userId = Meteor.userId();
-      Attachments.insert(file);
+
+      const attachment = Attachments.insert(file);
+
+      if (attachment && attachment._id && attachment.isImage()) {
+        card.setCover(attachment._id);
+      }
+
       Popup.close();
     });
   },
@@ -110,7 +118,12 @@ Template.previewClipboardImagePopup.events({
       file.boardId = card.boardId;
       file.cardId = card._id;
       file.userId = Meteor.userId();
-      Attachments.insert(file);
+      const attachment = Attachments.insert(file);
+
+      if (attachment && attachment._id && attachment.isImage()) {
+        card.setCover(attachment._id);
+      }
+
       pastedResults = null;
       $(document.body).pasteImageReader(() => {});
       Popup.close();

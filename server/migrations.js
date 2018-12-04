@@ -109,9 +109,9 @@ Migrations.add('add-member-isactive-field', () => {
   Boards.find({}, {fields: {members: 1}}).forEach((board) => {
     const allUsersWithSomeActivity = _.chain(
       Activities.find({ boardId: board._id }, { fields:{ userId:1 }}).fetch())
-        .pluck('userId')
-        .uniq()
-        .value();
+      .pluck('userId')
+      .uniq()
+      .value();
     const currentUsers = _.pluck(board.members, 'userId');
     const formerUsers = _.difference(allUsersWithSomeActivity, currentUsers);
 
@@ -129,4 +129,248 @@ Migrations.add('add-member-isactive-field', () => {
     });
     Boards.update(board._id, {$set: {members: newMemberSet}}, noValidate);
   });
+});
+
+Migrations.add('add-sort-checklists', () => {
+  Checklists.find().forEach((checklist, index) => {
+    if (!checklist.hasOwnProperty('sort')) {
+      Checklists.direct.update(
+        checklist._id,
+        { $set: { sort: index } },
+        noValidate
+      );
+    }
+    checklist.items.forEach((item, index) => {
+      if (!item.hasOwnProperty('sort')) {
+        Checklists.direct.update(
+          { _id: checklist._id, 'items._id': item._id },
+          { $set: { 'items.$.sort': index } },
+          noValidate
+        );
+      }
+    });
+  });
+});
+
+Migrations.add('add-swimlanes', () => {
+  Boards.find().forEach((board) => {
+    const swimlaneId = board.getDefaultSwimline()._id;
+    Cards.find({ boardId: board._id }).forEach((card) => {
+      if (!card.hasOwnProperty('swimlaneId')) {
+        Cards.direct.update(
+          { _id: card._id },
+          { $set: { swimlaneId } },
+          noValidate
+        );
+      }
+    });
+  });
+});
+
+Migrations.add('add-views', () => {
+  Boards.find().forEach((board) => {
+    if (!board.hasOwnProperty('view')) {
+      Boards.direct.update(
+        { _id: board._id },
+        { $set: { view: 'board-view-swimlanes' } },
+        noValidate
+      );
+    }
+  });
+});
+
+Migrations.add('add-checklist-items', () => {
+  Checklists.find().forEach((checklist) => {
+    // Create new items
+    _.sortBy(checklist.items, 'sort').forEach((item, index) => {
+      ChecklistItems.direct.insert({
+        title: (item.title ? item.title : 'Checklist'),
+        sort: index,
+        isFinished: item.isFinished,
+        checklistId: checklist._id,
+        cardId: checklist.cardId,
+      });
+    });
+
+    // Delete old ones
+    Checklists.direct.update({ _id: checklist._id },
+      { $unset: { items : 1 } },
+      noValidate
+    );
+  });
+});
+
+Migrations.add('add-profile-view', () => {
+  Users.find().forEach((user) => {
+    if (!user.hasOwnProperty('profile.boardView')) {
+      // Set default view
+      Users.direct.update(
+        { _id: user._id },
+        { $set: { 'profile.boardView': 'board-view-lists' } },
+        noValidate
+      );
+    }
+  });
+});
+
+Migrations.add('add-card-types', () => {
+  Cards.find().forEach((card) => {
+    Cards.direct.update(
+      { _id: card._id },
+      { $set: {
+        type: 'cardType-card',
+        linkedId: null } },
+      noValidate
+    );
+  });
+});
+
+Migrations.add('add-custom-fields-to-cards', () => {
+  Cards.update({
+    customFields: {
+      $exists: false,
+    },
+  }, {
+    $set: {
+      customFields:[],
+    },
+  }, noValidateMulti);
+});
+
+Migrations.add('add-requester-field', () => {
+  Cards.update({
+    requestedBy: {
+      $exists: false,
+    },
+  }, {
+    $set: {
+      requestedBy:'',
+    },
+  }, noValidateMulti);
+});
+
+Migrations.add('add-assigner-field', () => {
+  Cards.update({
+    assignedBy: {
+      $exists: false,
+    },
+  }, {
+    $set: {
+      assignedBy:'',
+    },
+  }, noValidateMulti);
+});
+
+Migrations.add('add-parent-field-to-cards', () => {
+  Cards.update({
+    parentId: {
+      $exists: false,
+    },
+  }, {
+    $set: {
+      parentId:'',
+    },
+  }, noValidateMulti);
+});
+
+Migrations.add('add-subtasks-boards', () => {
+  Boards.update({
+    subtasksDefaultBoardId: {
+      $exists: false,
+    },
+  }, {
+    $set: {
+      subtasksDefaultBoardId: null,
+      subtasksDefaultListId: null,
+    },
+  }, noValidateMulti);
+});
+
+Migrations.add('add-subtasks-sort', () => {
+  Boards.update({
+    subtaskSort: {
+      $exists: false,
+    },
+  }, {
+    $set: {
+      subtaskSort: -1,
+    },
+  }, noValidateMulti);
+});
+
+Migrations.add('add-subtasks-allowed', () => {
+  Boards.update({
+    allowsSubtasks: {
+      $exists: false,
+    },
+  }, {
+    $set: {
+      allowsSubtasks: true,
+    },
+  }, noValidateMulti);
+});
+
+Migrations.add('add-subtasks-allowed', () => {
+  Boards.update({
+    presentParentTask: {
+      $exists: false,
+    },
+  }, {
+    $set: {
+      presentParentTask: 'no-parent',
+    },
+  }, noValidateMulti);
+});
+
+Migrations.add('add-authenticationMethod', () => {
+  Users.update({
+    'authenticationMethod': {
+      $exists: false,
+    },
+  }, {
+    $set: {
+      'authenticationMethod': 'password',
+    },
+  }, noValidateMulti);
+});
+
+Migrations.add('remove-tag', () => {
+  Users.update({
+  }, {
+    $unset: {
+      'profile.tags':1,
+    },
+  }, noValidateMulti);
+});
+
+Migrations.add('remove-customFields-references-broken', () => {
+  Cards.update({'customFields.$value': null},
+    { $pull: {
+      customFields: {value: null},
+    },
+    }, noValidateMulti);
+});
+
+Migrations.add('add-product-name', () => {
+  Settings.update({
+    productName: {
+      $exists: false,
+    },
+  }, {
+    $set: {
+      productName:'',
+    },
+  }, noValidateMulti);
+});
+
+Migrations.add('add-hide-logo', () => {
+  Settings.update({
+    hideLogo: {
+      $exists: false,
+    },
+  }, {
+    $set: {
+      hideLogo: false,
+    },
+  }, noValidateMulti);
 });

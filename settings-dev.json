@@ -1,0 +1,13 @@
+{
+  "galaxy.meteor.com": {
+     "env": {
+  "ROOT_URL": "https://wekan.communecter.org",
+  "MONGO_URL":"mongodb://wekan:2210wekan_$@c30.lamppost.16.mongolayer.com:10030,c19.lamppost.17.mongolayer.com:10019/wekan?replicaSet=set-56320e0bc7b7f0d9c3000bf4",
+  "MONGO_OPLOG_URL":"mongodb://wekan:2210wekan_$@c30.lamppost.16.mongolayer.com:10030,c19.lamppost.17.mongolayer.com:10019/local?authSource=wekan&replicaSet=set-56320e0bc7b7f0d9c3000bf4"
+     }
+   },
+"environment": "production",
+"endpoint":"http://dev.communecter.org",
+"module":"co2",
+"urlimage":"http://dev.communecter.org"
+}

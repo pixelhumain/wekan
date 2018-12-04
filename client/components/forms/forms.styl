@@ -1,10 +1,10 @@
 @import 'nib'
 
+select,
 textarea,
 input:not([type=file]),
 button
   box-sizing: border-box
-  -webkit-appearance: none
   background-color: #ebebeb
   border: 1px solid #ccc
   border-radius: 3px
@@ -84,6 +84,9 @@ select
   max-height: 300px
   width: 256px
   margin-bottom: 8px
+
+  &.inline
+  	width: 100%
 
 option[disabled]
   color: #8c8c8c
@@ -222,9 +225,12 @@ textarea
 
 .edit-controls,
 .add-controls
+  display: flex
+  align-items: baseline
   margin-top: 0
 
   button[type=submit]
+  input[type=button]
     float: left
     height: 32px
     margin-top: -2px
@@ -629,6 +635,59 @@ button
 
       a, .quiet
         color: white
+
+// Material Design Toggle Switch
+.material-toggle-switch
+  display: flex
+
+.toggle-label
+  position: relative
+  display: block
+  height: 20px
+  width: 44px
+  background-color: #a6a6a6
+  border-radius: 100px
+  cursor: pointer
+  transition: all 0.3s ease
+
+  &:after
+    position: absolute
+    left: -2px
+    top: -3px
+    display: block
+    width: 26px
+    height: 26px
+    border-radius: 100px
+    background-color: #fff
+    box-shadow: 0px 3px 3px rgba(0,0,0,0.05)
+    content: ''
+    transition: all 0.3s ease
+
+  &:active
+    &:after
+      transform: scale(1.15, 0.85)
+
+.toggle-switch:checked ~ .toggle-label
+  background-color: #6fbeb5
+
+  &:after
+    left: 20px
+    background-color: #179588
+
+.toggle-switch:checked:disabled ~ .toggle-label
+  background-color: #d5d5d5
+  pointer-events: none
+
+  &:after
+    background-color: #bcbdbc
+
+.toggle-switch
+  display: none
+
+.toggle-switch-title
+  margin: 0 0.5em
+  display: flex
+
 
 @media screen and (max-width: 800px)
   .edit-controls,

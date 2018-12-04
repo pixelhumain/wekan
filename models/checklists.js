@@ -60,6 +60,18 @@ Checklists.helpers({
   isFinished() {
     return 0 !== this.itemCount() && this.itemCount() === this.finishedCount();
   },
+  checkAllItems(){
+    const checkItems = ChecklistItems.find({checklistId: this._id});
+    checkItems.forEach(function(item){
+      item.check();
+    });
+  },
+  uncheckAllItems(){
+    const checkItems = ChecklistItems.find({checklistId: this._id});
+    checkItems.forEach(function(item){
+      item.uncheck();
+    });
+  },
   itemIndex(itemId) {
     const items = self.findOne({_id : this._id}).items;
     return _.pluck(items, '_id').indexOf(itemId);
@@ -104,6 +116,7 @@ if (Meteor.isServer) {
       cardId: doc.cardId,
       boardId: Cards.findOne(doc.cardId).boardId,
       checklistId: doc._id,
+      checklistName:doc.title,
     });
   });
 
@@ -114,6 +127,16 @@ if (Meteor.isServer) {
         Activities.remove(activity._id);
       });
     }
+    Activities.insert({
+      userId,
+      activityType: 'removeChecklist',
+      cardId: doc.cardId,
+      boardId: Cards.findOne(doc.cardId).boardId,
+      checklistId: doc._id,
+      checklistName:doc.title,
+    });
+
+
   });
 }
 

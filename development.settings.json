@@ -1,0 +1,6 @@
+{
+"environment": "production",
+"endpoint":"http://qa.communecter.org",
+"module":"co2",
+"urlimage":"http://qa.communecter.org"
+}

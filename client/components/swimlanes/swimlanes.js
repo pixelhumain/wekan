@@ -1,4 +1,4 @@
-const { calculateIndex } = Utils;
+const { calculateIndex, enableClickOnTouch } = Utils;
 
 function currentCardIsInThisList(listId, swimlaneId) {
   const currentCard = Cards.findOne(Session.get('currentCard'));
@@ -7,6 +7,8 @@ function currentCardIsInThisList(listId, swimlaneId) {
     return currentCard && currentCard.listId === listId;
   else if (currentUser.profile.boardView === 'board-view-swimlanes')
     return currentCard && currentCard.listId === listId && currentCard.swimlaneId === swimlaneId;
+  else if (currentUser.profile.boardView === 'board-view-cal')
+    return currentCard;
   else
     return false;
 }
@@ -63,6 +65,9 @@ function initSortable(boardComponent, $listsDom) {
       boardComponent.setIsDragging(false);
     },
   });
+
+  // ugly touch event hotfix
+  enableClickOnTouch('.js-list:not(.js-list-composer)');
 
   function userIsMember() {
     return Meteor.user() && Meteor.user().isBoardMember() && !Meteor.user().isCommentOnly();

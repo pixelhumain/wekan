@@ -63,13 +63,13 @@ Lists.attachSchema(new SimpleSchema({
 
 Lists.allow({
   insert(userId, doc) {
-    return allowIsBoardMemberNonComment(userId, Boards.findOne(doc.boardId));
+    return allowIsBoardMemberCommentOnly(userId, Boards.findOne(doc.boardId));
   },
   update(userId, doc) {
-    return allowIsBoardMemberNonComment(userId, Boards.findOne(doc.boardId));
+    return allowIsBoardMemberCommentOnly(userId, Boards.findOne(doc.boardId));
   },
   remove(userId, doc) {
-    return allowIsBoardMemberNonComment(userId, Boards.findOne(doc.boardId));
+    return allowIsBoardMemberCommentOnly(userId, Boards.findOne(doc.boardId));
   },
   fetch: ['boardId'],
 });
@@ -83,6 +83,17 @@ Lists.helpers({
     if (swimlaneId)
       selector.swimlaneId = swimlaneId;
     return Cards.find(Filter.mongoSelector(selector),
+      { sort: ['sort'] });
+  },
+
+  cardsUnfiltered(swimlaneId) {
+    const selector = {
+      listId: this._id,
+      archived: false,
+    };
+    if (swimlaneId)
+      selector.swimlaneId = swimlaneId;
+    return Cards.find(selector,
       { sort: ['sort'] });
   },
 

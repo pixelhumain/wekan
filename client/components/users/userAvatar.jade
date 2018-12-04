@@ -1,7 +1,7 @@
 template(name="userAvatar")
   a.member.js-member(title="{{userData.profile.fullname}} ({{userData.username}})")
     if userData.profile.avatarUrl
-      img.avatar.avatar-image(src=userData.profile.avatarUrl)
+      img.avatar.avatar-image(src="{{userData.profile.avatarUrl}}")
     else
       +userAvatarInitials(userId=userData._id)
 
@@ -75,6 +75,3 @@ template(name="cardMemberPopup")
       if currentUser.isNotCommentOnly
           li: a.js-remove-member {{_ 'remove-member-from-card'}}
 
-      if $eq currentUser._id user._id
-        with currentUser
-          li: a.js-edit-profile {{_ 'edit-profile'}}

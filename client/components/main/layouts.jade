@@ -9,14 +9,24 @@ head
     packages.
   link(rel="shortcut icon" href="/wekan-favicon.png")
   link(rel="apple-touch-icon" href="/wekan-favicon.png")
+  link(rel="mask-icon" href="/wekan-150.svg")
   link(rel="manifest" href="/wekan-manifest.json")
 
 template(name="userFormsLayout")
   section.auth-layout
-    h1.at-form-landing-logo
-      img(src="{{pathFor '/wekan-logo.png'}}" alt="Wekan")
+    unless currentSetting.hideLogo
+      h1.at-form-landing-logo
+        img(src="{{pathFor '/wekan-logo.png'}}" alt="Wekan")
+    if currentSetting.hideLogo
+      h1
+        br
+        br
     section.auth-dialog
       +Template.dynamic(template=content)
+      +connectionMethod
+      if isCas
+        .at-form
+          button#cas(class='at-btn submit' type='submit') {{casSignInLabel}}
       div.at-form-lang
         select.select-lang.js-userform-set-language
           each languages
@@ -32,11 +42,18 @@ template(name="defaultLayout")
   if (Modal.isOpen)
     #modal
       .overlay
-      .modal-content
-        a.modal-close-btn.js-close-modal
-          i.fa.fa-times-thin
-        +Template.dynamic(template=Modal.getHeaderName)
-        +Template.dynamic(template=Modal.getTemplateName)
+      if (Modal.isWide)
+        .modal-content-wide.modal-container
+          a.modal-close-btn.js-close-modal
+            i.fa.fa-times-thin
+          +Template.dynamic(template=Modal.getHeaderName)
+          +Template.dynamic(template=Modal.getTemplateName)
+      else
+        .modal-content.modal-container
+          a.modal-close-btn.js-close-modal
+            i.fa.fa-times-thin
+          +Template.dynamic(template=Modal.getHeaderName)
+          +Template.dynamic(template=Modal.getTemplateName)
 
 template(name="notFound")
   +message(label='page-not-found')

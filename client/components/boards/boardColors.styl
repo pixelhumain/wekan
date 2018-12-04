@@ -51,10 +51,24 @@ setBoardColor(color)
     &:not(.is-checked) + .minicard:hover:not(.minicard-composer)
       background: lighten(color, 97%)
 
+  .toggle-label
+
+    &:after
+      background-color: darken(color, 20%)
+
+  .toggle-switch:checked ~ .toggle-label
+    background-color: lighten(color, 20%)
+
+    &:after
+      background-color: darken(color, 20%)
+
   @media screen and (max-width: 800px)
     &.pop-over .header
       background: color
       color: white
+
+   &#header ul li.current, &#header-quick-access ul li.current
+      border-bottom: 4px solid lighten(color, 20%)
 
 .board-color-nephritis
   setBoardColor(#27AE60)

@@ -14,7 +14,7 @@
   },
   "rules": {
     "strict": 0,
-    "no-undef": 2,
+    "no-undef": 0,
     "accessor-pairs": 2,
     "comma-dangle": [2, "always-multiline"],
     "consistent-return": 2,
@@ -52,7 +52,6 @@
     "prefer-const": 2,
     "prefer-spread": 2,
     "prefer-template": 2,
-    "no-console": 0,
     "no-unused-vars" : "warn"
   },
   "globals": {
@@ -101,7 +100,9 @@
     "Attachments": true,
     "Boards": true,
     "CardComments": true,
+    "DatePicker" : true,
     "Cards": true,
+    "CustomFields": true,
     "Lists": true,
     "UnsavedEditCollection": true,
     "Users": true,
@@ -120,16 +121,21 @@
     "allowIsBoardAdmin": true,
     "allowIsBoardMember": true,
     "allowIsBoardMemberByCard": true,
-    "allowIsBoardMemberNonComment": true,
+    "allowIsBoardMemberCommentOnly": true,
+    "allowIsBoardMemberNoComments": true,
     "Emoji": true,
     "Checklists": true,
     "Settings": true,
     "InvitationCodes": true,
-    "Winston":true,
     "JsonRoutes": true,
     "Authentication": true,
     "Integrations": true,
     "HTTP": true,
-    "AccountSettings": true
+    "AccountSettings": true,
+    "Announcements": true,
+    "Swimlanes": true,
+    "ChecklistItems": true,
+    "Subtasks": true,
+    "Npm": true
   }
 }
